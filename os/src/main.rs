@@ -23,6 +23,16 @@ mod sbi;
 
 global_asm!(include_str!("entry.asm"));
 
+const LOGO: &str = r#"
+ __     __          ____      
+ \ \   / /         / __ \     
+  \ \_/ /__   ___ | |  | |___ 
+   \   / _ \ / _ \| |  | / __|
+    | | (_) | (_) | |__| \__ \
+    |_|\___/ \___/ \____/|___/
+                             
+"#;
+
 /// clear BSS segment
 pub fn clear_bss() {
     extern "C" {
@@ -48,6 +58,8 @@ pub fn rust_main() -> ! {
         fn boot_stack_top(); // stack top
     }
     clear_bss();
+    println!("{}", LOGO);
+    
     logging::init();
     println!("[kernel] Hello, world!");
     trace!(
