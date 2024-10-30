@@ -1,5 +1,4 @@
-
-use log::{self, Level, LevelFilter, Log, Metadata, Record};
+use log::*;
 
 struct SimpleLogger;
 
@@ -40,3 +39,4 @@ pub fn init() {
         _ => LevelFilter::Off,
     });
 }
+
