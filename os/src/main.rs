@@ -81,7 +81,5 @@ pub fn rust_main() -> ! {
     );
     error!("[kernel] .bss [{:#x}, {:#x})", sbss as usize, ebss as usize);
 
-    // CI autotest success: sbi::shutdown(false)
-    // CI autotest failed : sbi::shutdown(true)
     sbi::shutdown(false)
 }
