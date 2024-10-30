@@ -3,8 +3,10 @@ TARGET := riscv64gc-unknown-none-elf
 MODE := debug
 NAME := YooOs
 
-KERNEL_ELF := target/$(TARGET)/$(MODE)/$(NAME)
-DISASM_TMP := target/$(TARGET)/$(MODE)/asm
+# Path
+DIR := os/target/$(TARGET)/$(MODE)
+KERNEL_ELF := $(DIR)/$(NAME)
+DISASM_TMP := $(DIR)/asm
 
 # Building mode argument
 ifeq ($(MODE), release)
@@ -14,7 +16,7 @@ endif
 # BOARD
 BOARD := qemu
 SBI ?= rustsbi
-BOOTLOADER := ../bootloader/$(SBI)-$(BOARD).bin
+BOOTLOADER := ./bootloader/$(SBI)-$(BOARD).bin
 
 # KERNEL ENTRY
 KERNEL_ENTRY_PA := 0x80200000
@@ -26,12 +28,14 @@ OBJCOPY := rust-objcopy --binary-architecture=riscv64
 # Disassembly
 DISASM ?= -x
 
+# QEMU
 QEMU := qemu-system-riscv64
 QEMU_ARGS := -machine virt \
 			 -nographic \
 			 -bios $(BOOTLOADER) \
 			 -kernel $(KERNEL_ELF)
 
+# GDB
 GDB := riscv64-unknown-elf-gdb
 
 build: env 
@@ -62,17 +66,16 @@ disasm-vim: kernel
 
 run: run-inner
 
-
-run-inner: qemu-version-check build
+run-inner:  build
 	@$(QEMU) $(QEMU_ARGS)
 
-debug: qemu-version-check build
+debug:  build
 	@tmux new-session -d \
 		"$(QEMU) $(QEMU_ARGS) -s -S" && \
 		tmux split-window -h "$(GDB) -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
 		tmux -2 attach-session -d
 
-gdbserver: qemu-version-check build
+gdbserver:  build
 	@$(QEMU) $(QEMU_ARGS) -s -S
 
 gdbclient:
