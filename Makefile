@@ -1,84 +1,74 @@
-# Building
-TARGET := riscv64gc-unknown-none-elf
-MODE := debug
-NAME := YooOs
+# Building variables
+PACKAGE_NAME = YooOs
+BOOTLOADER = default
+TARGET = riscv64gc-unknown-none-elf
+export BOARD = qemu
+export MODE = debug
 
-# Path
-DIR := os/target/$(TARGET)/$(MODE)
-KERNEL_ELF := $(DIR)/$(NAME)
-DISASM_TMP := $(DIR)/asm
+# Tools
+QEMU = qemu-system-riscv64
+GDB = riscv64-elf-gdb
+OBJDUMP = rust-objdump --arch-name=riscv64
+OBJCOPY = rust-objcopy --binary-architecture=riscv64
+PAGER ?= less
 
-# Building mode argument
-ifeq ($(MODE), release)
-	MODE_ARG := --release
-endif
-
-# BOARD
-BOARD := qemu
-SBI ?= rustsbi
-BOOTLOADER := ./bootloader/$(SBI)-$(BOARD).bin
-
-# KERNEL ENTRY
-KERNEL_ENTRY_PA := 0x80200000
-
-# Binutils
-OBJDUMP := rust-objdump --arch-name=riscv64
-OBJCOPY := rust-objcopy --binary-architecture=riscv64
-
-# Disassembly
-DISASM ?= -x
-
-# QEMU
-QEMU := qemu-system-riscv64
-QEMU_ARGS := -machine virt \
+# Args
+DISASM_ARGS = -d
+QEMU_ARGS = -machine virt \
 			 -nographic \
 			 -bios $(BOOTLOADER) \
 			 -kernel $(KERNEL_ELF)
 
-# GDB
-GDB := riscv64-unknown-elf-gdb
+# Target files
+TARGET_DIR := os/target/$(TARGET)/$(MODE)
+KERNEL_ELF := $(TARGET_DIR)/$(PACKAGE_NAME)
+KERNEL_ASM := $(TARGET_DIR)/$(PACKAGE_NAME).asm
 
-build: env 
+# Default target
+.PHONY: all
+all: $(KERNEL_ELF) $(KERNEL_ASM)
 
-env:
-	(rustup target list | grep "riscv64gc-unknown-none-elf (installed)") || rustup target add $(TARGET)
-	cargo install cargo-binutils
-	rustup component add rust-src
-	rustup component add llvm-tools-preview
+# Build target
+.PHONY: build
+build: 
+	@echo "Building for platform: $(BOARD)"
+	@cd os && cargo build
+	@echo "Updated: $(KERNEL_ELF)"
 
+# Assembling target
+$(KERNEL_ASM): $(KERNEL_ELF)
+	@$(OBJDUMP) $(DISASM_ARGS) $(KERNEL_ELF) > $(KERNEL_ASM)
+	@echo "Updated: $(KERNEL_ASM)"
 
-kernel:
-	@echo Platform: $(BOARD)
-	@cp src/linker-$(BOARD).ld src/linker.ld
-	@cargo build $(MODE_ARG)
-	@rm src/linker.ld
-
-clean:
-	@cargo clean
-
-disasm: kernel
-	@$(OBJDUMP) $(DISASM) $(KERNEL_ELF) | less
-
-disasm-vim: kernel
-	@$(OBJDUMP) $(DISASM) $(KERNEL_ELF) > $(DISASM_TMP)
-	@vim $(DISASM_TMP)
-	@rm $(DISASM_TMP)
-
-run: run-inner
-
-run-inner:  build
+# Run target
+.PHONY: run
+run: build
 	@$(QEMU) $(QEMU_ARGS)
 
-debug:  build
-	@tmux new-session -d \
-		"$(QEMU) $(QEMU_ARGS) -s -S" && \
-		tmux split-window -h "$(GDB) -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
-		tmux -2 attach-session -d
+# Clean target
+.PHONY: clean
+clean:
+	@echo "Cleaning build artifacts..."
+	@cd os && cargo clean
+	@rm -rf $(TARGET_DIR)/*
+	@echo "Cleaned: $(TARGET_DIR) and related files."
 
-gdbserver:  build
+# Disassembly target
+.PHONY: disasm
+disasm: $(KERNEL_ASM)
+	@cat $(KERNEL_ASM) | $(PAGER)
+
+# GDB server target
+.PHONY: gdbserver
+gdbserver: build
 	@$(QEMU) $(QEMU_ARGS) -s -S
 
-gdbclient:
-	@$(GDB) -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'
+# GDB client target
+.PHONY: gdbclient
+gdbclient: build
+	@$(GDB) -ex 'file $(KERNEL_ELF)' \
+			-ex 'set arch riscv:rv64' \
+			-ex 'target remote localhost:1234'
 
-.PHONY: build env kernel clean disasm disasm-vim run-inner gdbserver gdbclient qemu-version-check
+# Mark all phony targets
+.PHONY: all build run clean disasm gdbserver gdbclient

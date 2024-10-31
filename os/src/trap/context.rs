@@ -1,4 +1,6 @@
 use riscv::register::sstatus::Sstatus;
+use riscv::register::sstatus::SPP;
+use riscv::register::sstatus;
 
 #[repr(C)]
 #[derive(Clone, Debug)]
@@ -10,7 +12,7 @@ pub struct TrapContext {
     // 内核 -> 用户,要保存的
     pub k_sp : usize,           // 34
     pub k_ra : usize,           // 35
-    pub k_s  : [usize: 12],     // 36 - 47
+    pub k_s  : [usize; 12],     // 36 - 47
     pub k_fp : usize,           // 48
     pub k_tp : usize,           // 49
 
@@ -28,9 +30,9 @@ impl TrapContext {
     pub fn new(entry: usize, sp : usize) -> Self {
         let mut sstatus = sstatus::read();
         sstatus.set_spp(SPP::User);
-        /// 禁止处理器在特权模式下响应外部中断
+        // 禁止处理器在特权模式下响应外部中断
         sstatus.set_sie(false);
-        /// 从特权模式返回到用户模式时，禁用中断
+        // 从特权模式返回到用户模式时，禁用中断
         sstatus.set_spie(false);
         let mut context = Self {
             user_reg: [0; 32],

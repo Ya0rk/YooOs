@@ -1,4 +1,6 @@
-/// clear bss
+use crate::println;
+
+// clear bss
 extern "C" {
     fn sbss();
     fn ebss();
@@ -9,7 +11,6 @@ pub fn clear_bss() {
     }
 }
 
-
 /// show LOGO
 const LOGO: &str = r#"
 __     __          ____      
@@ -18,7 +19,7 @@ __     __          ____
   \   / _ \ / _ \| |  | / __|
    | | (_) | (_) | |__| \__ \
    |_|\___/ \___/ \____/|___/
-                            
+                    
 "#;
 pub fn show_logo() {
     println!("{}", LOGO);

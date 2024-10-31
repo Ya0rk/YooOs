@@ -1,24 +1,23 @@
 #![no_std]
 #![no_main]
+// #[macro_use]
 
 use core::arch::global_asm;
 
-#[macro_use]
-mod console;
-mod lang_items;
-mod logging;
 mod sbi;
-mod booting;
+mod trap;
+mod myutil;
 
 global_asm!(include_str!("entry.asm"));
 
 /// the rust entry-point of os
 #[no_mangle]
 pub fn rust_main() -> ! {
-    booting::clear_bss();
-    booting::show_logo();
+    myutil::booting::clear_bss();
+    trap::init();
+    myutil::booting::show_logo();
     
-    logging::init();
+    myutil::logging::init();
     println!("[kernel] Hello, world!");
 
     sbi::shutdown(false)
