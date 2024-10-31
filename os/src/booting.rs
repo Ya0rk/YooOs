@@ -1,9 +1,9 @@
 /// clear bss
+extern "C" {
+    fn sbss();
+    fn ebss();
+}
 pub fn clear_bss() {
-    extern "C" {
-        fn sbss();
-        fn ebss();
-    }
     unsafe {
         (sbss as usize..ebss as usize).for_each(|a| (a as *mut u8).write_volatile(0));
     }
