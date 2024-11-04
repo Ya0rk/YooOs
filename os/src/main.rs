@@ -4,6 +4,8 @@
 
 use core::arch::global_asm;
 
+extern crate alloc;
+
 mod sbi;
 mod trap;
 mod myutil;
