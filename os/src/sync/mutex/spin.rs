@@ -1,6 +1,6 @@
 use crate::time::boot_time;
 use crate::utils::async_utils::SendWrapper;
-use super::MutexSupport;
+use self::MutexSupport;
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
@@ -17,7 +17,6 @@ struct MutexGuard<'a, T: ?Sized, S: MutexSupport> {
 
 // 保护共享数据的互斥锁
 pub struct SpinMutex<T: ?Sized, S: MutexSupport> {
-    // debug_cnt: UnsafeCell<usize>,
     lock: AtomicBool,         // 互斥锁的状态（锁定或未锁定）
     _marker: PhantomData<S>,
     data: UnsafeCell<T>,
@@ -58,23 +57,16 @@ impl<'a, T, S: MutexSupport> SpinMutex<T, S> {
     #[inline(always)]
     pub fn lock(&self) -> impl DerefMut<Target = T> + '_ {
         let _guard = S::before_lock();
-        loop {
+        while self.lock.load(Ordering::Relaxed){
             self.wait_unlock();
-            if self
-                .lock
-                .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
-                .is_ok()
-            {
-                break;
-            }
         }
+        self.lock.store(true, Ordering::Acquire);
         MutexGuard {
             mutex: self,
             support_guard: _guard,
         }
     }
 
-    /// # SAFETY
     /// This is highly unsafe.
     /// You should ensure that context switch won't happen during
     /// the locked data's lifetime.
